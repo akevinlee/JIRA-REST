@@ -1,0 +1,796 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://www.urbancode.com/PluginXMLSchema_v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <header>
+        <identifier version="1" id="com.urbancode.air.plugin.JiraREST" name="JIRA Issues (REST)"/>
+        <description>The JIRA Issues plugin allows you to create, edit, transition and add comments to JIRA issues as part of a process. This plugin uses the JIRA REST API.</description>
+        <tag>Issue Tracking/JIRA REST</tag>
+    </header>
+
+    <!-- ==================================== -->
+    <!--  Create Issue                        -->
+    <!-- ==================================== -->
+    <step-type name="Create Issue">
+        <description>Create a new Issue in a JIRA.</description>
+        <properties>
+            <property name="projectKey" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.projectKey}" label="Project Key"
+                             description="The project key in JIRA."/>
+            </property>
+            <property name="issueTypeName" required="true">
+                <property-ui type="textBox" label="Issue Type" description="The name of the issue type to create."/>
+            </property>
+            <property name="priorityName" required="true">
+                <property-ui type="textBox" label="Priority" description="The name of the priority for the issue."/>
+            </property>
+            <property name="summary" required="true">
+                <property-ui type="textBox" label="Summary" description="The summary for the issue."/>
+            </property>
+            <property name="assignee" required="false">
+                <property-ui type="textBox" label="Assignee"
+                             description="The assignee for the issue. An assignee of -1 will use Jira's automatic assignment."/>
+            </property>
+            <property name="components" required="false">
+                <property-ui type="textBox" label="Components"
+                             description="Command separated list of components affected by this issue."/>
+            </property>
+            <property name="versions" required="false">
+                <property-ui type="textBox" label="Versions"
+                             description="Command separated list of versions affected by this issue."/>
+            </property>
+            <property name="additionalFields" required="false">
+                <property-ui type="textAreaBox" label="Additional Fields"
+                             description="Newline separated list of name=value pairs for additional fields to set for this issue."/>
+            </property>
+            <property name="serverUrl" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.serverUrl}" label="JIRA Base URL"
+                             description="The JIRA server URL"/>
+            </property>
+            <property name="username" required="false">
+                <property-ui type="textBox" default-value="${p:application/jira.username}" label="User Name"
+                             description="The user name to be used to connect to the JIRA server."/>
+            </property>
+            <property name="password" required="false">
+                <property-ui type="secureBox" default-value="${p:application/jira.password}" label="Password"
+                             description="The password to be used to connect to the JIRA server."/>
+            </property>
+            <property name="passwordScript" required="false">
+                <property-ui type="textAreaBox" label="Password Script"
+                             description="If you wish to use a script or property lookups for your password, leave the Password field blank and enter it here."/>
+            </property>
+            <property name="validate" required="false">
+                <property-ui type="checkBox" label="Validate Data in JIRA" hidden="true"
+                             description="Select this box to check that valid field data, i.e. project key, priority, issuetype etc is sent. Note: this will require additional API calls."/>
+            </property>
+            <property name="debug" required="false">
+                <property-ui type="checkBox" label="Debug Output" hidden="true"
+                             description="Select this option to display debug output during execution."/>
+            </property>
+        </properties>
+        <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+        <command program="${GROOVY_HOME}/bin/groovy">
+            <arg value="-cp"/>
+            <arg path="classes:lib/*"/>
+            <arg value="-Djnp.disableDiscovery=true"/>
+            <arg file="create_issue.groovy"/>
+            <arg file="${PLUGIN_INPUT_PROPS}"/>
+            <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+        </command>
+    </step-type>
+
+    <!-- ==================================== -->
+    <!--  Create Component                    -->
+    <!-- ==================================== -->
+    <step-type name="Create Component">
+        <description>Create a new Component in a JIRA, setting the value of the property "componentId" to the id of the component created.</description>
+        <properties>
+            <property name="projectKey" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.projectKey}" label="Project Key"
+                             description="The project key in JIRA."/>
+            </property>
+            <property name="componentName" required="true">
+                <property-ui type="textBox" label="Component Name" description="The name of the component to create."/>
+            </property>
+            <property name="description" required="false">
+                <property-ui type="textAreaBox" label="Description"
+                             description="Description of the version."/>
+            </property>
+            <property name="serverUrl" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.serverUrl}" label="JIRA Base URL"
+                             description="The JIRA server URL"/>
+            </property>
+            <property name="username" required="false">
+                <property-ui type="textBox" default-value="${p:application/jira.username}" label="User Name"
+                             description="The user name to be used to connect to the JIRA server."/>
+            </property>
+            <property name="password" required="false">
+                <property-ui type="secureBox" default-value="${p:application/jira.password}" label="Password"
+                             description="The password to be used to connect to the JIRA server."/>
+            </property>
+            <property name="passwordScript" required="false">
+                <property-ui type="textAreaBox" label="Password Script"
+                             description="If you wish to use a script or property lookups for your password, leave the Password field blank and enter it here."/>
+            </property>
+            <property name="validate" required="false">
+                <property-ui type="checkBox" label="Validate Data in JIRA" hidden="true"
+                             description="Select this box to check that valid field data, i.e. project key, priority, issuetype etc is sent. Note: this will require additional API calls."/>
+            </property>
+            <property name="debug" required="false">
+                <property-ui type="checkBox" label="Debug Output" hidden="true"
+                             description="Select this option to display debug output during execution."/>
+            </property>
+        </properties>
+        <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+        <command program="${GROOVY_HOME}/bin/groovy">
+            <arg value="-cp"/>
+            <arg path="classes:lib/*"/>
+            <arg value="-Djnp.disableDiscovery=true"/>
+            <arg file="create_component.groovy"/>
+            <arg file="${PLUGIN_INPUT_PROPS}"/>
+            <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+        </command>
+    </step-type>
+
+    <!-- ==================================== -->
+    <!--  Create Version                      -->
+    <!-- ==================================== -->
+    <step-type name="Create Version">
+        <description>Create a new Version in a JIRA, setting the value of the property "versionId" to the id of the version created.</description>
+        <properties>
+            <property name="projectKey" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.projectKey}" label="Project Key"
+                             description="The project key in JIRA."/>
+            </property>
+            <property name="versionName" required="true">
+                <property-ui type="textBox" label="Version Name" description="The name of the version to create."/>
+            </property>
+            <property name="description" required="false">
+                <property-ui type="textAreaBox" label="Description"
+                             description="Description of the version."/>
+            </property>
+            <property name="serverUrl" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.serverUrl}" label="JIRA Base URL"
+                             description="The JIRA server URL"/>
+            </property>
+            <property name="username" required="false">
+                <property-ui type="textBox" default-value="${p:application/jira.username}" label="User Name"
+                             description="The user name to be used to connect to the JIRA server."/>
+            </property>
+            <property name="password" required="false">
+                <property-ui type="secureBox" default-value="${p:application/jira.password}" label="Password"
+                             description="The password to be used to connect to the JIRA server."/>
+            </property>
+            <property name="passwordScript" required="false">
+                <property-ui type="textAreaBox" label="Password Script"
+                             description="If you wish to use a script or property lookups for your password, leave the Password field blank and enter it here."/>
+            </property>
+            <property name="validate" required="false">
+                <property-ui type="checkBox" label="Validate Data in JIRA" hidden="true"
+                             description="Select this box to check that valid field data, i.e. project key, priority, issuetype etc is sent. Note: this will require additional API calls."/>
+            </property>
+            <property name="debug" required="false">
+                <property-ui type="checkBox" label="Debug Output" hidden="true"
+                             description="Select this option to display debug output during execution."/>
+            </property>
+        </properties>
+        <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+        <command program="${GROOVY_HOME}/bin/groovy">
+            <arg value="-cp"/>
+            <arg path="classes:lib/*"/>
+            <arg value="-Djnp.disableDiscovery=true"/>
+            <arg file="create_version.groovy"/>
+            <arg file="${PLUGIN_INPUT_PROPS}"/>
+            <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+        </command>
+    </step-type>
+
+    <!-- ==================================== -->
+    <!--  Edit Issues                         -->
+    <!-- ==================================== -->
+    <step-type name="Edit Issues">
+        <description>Edit one or more Issues in JIRA, adding comments if required.</description>
+        <properties>
+            <property name="issueIds" required="true">
+                <property-ui type="textBox" label="issueIds" default-value="${p:version/jira.issueIds}"
+                             description="A comma-separated list of issues (by key) to edit."/>
+            </property>
+            <property name="failMode" required="true">
+                <property-ui type="selectBox" label="Fail Mode"
+                             description="What should be done when an issue cannot be found or edited."/>
+                <value label="Warn Only">WARN_ONLY</value>
+                <value label="Fail Fast">FAIL_FAST</value>
+                <value label="Fail On No Updates">FAIL_ON_NO_UPDATES</value>
+                <value label="Fail any Any Failure">FAIL_ON_ANY_FAILURE</value>
+            </property>
+            <property name="issueTypeName" required="false">
+                <property-ui type="textBox" label="Issue Type" description="The name of the issue type to edit."/>
+            </property>
+            <property name="priorityName" required="false">
+                <property-ui type="textBox" label="Priority" description="The name of the priority for the issue."/>
+            </property>
+            <property name="summary" required="false">
+                <property-ui type="textBox" label="Summary" description="The summary for the issue."/>
+            </property>
+            <property name="assignee" required="false">
+                <property-ui type="textBox" label="Assignee"
+                             description="The assignee for the issue."/>
+            </property>
+            <property name="commentBody" required="false">
+                <property-ui type="textAreaBox" label="Comment"
+                             description="The template to use for adding a comment to the issues."/>
+            </property>
+            <property name="components" required="false">
+                <property-ui type="textBox" label="Components"
+                             description="Command separated list of components affected by this issue."/>
+            </property>
+            <property name="versions" required="false">
+                <property-ui type="textBox" label="Versions"
+                             description="Command separated list of versions affected by this issue."/>
+            </property>
+            <property name="additionalFields" required="false">
+                <property-ui type="textAreaBox" label="Additional Fields"
+                             description="Newline separated list of name=value pairs for additional fields to set for this issue."/>
+            </property>
+            <property name="serverUrl" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.serverUrl}" label="JIRA Base URL"
+                             description="The JIRA server URL"/>
+            </property>
+            <property name="username" required="false">
+                <property-ui type="textBox" default-value="${p:application/jira.username}" label="User Name"
+                             description="The user name to be used to connect to the JIRA server."/>
+            </property>
+            <property name="password" required="false">
+                <property-ui type="secureBox" default-value="${p:application/jira.password}" label="Password"
+                             description="The password to be used to connect to the JIRA server."/>
+            </property>
+            <property name="passwordScript" required="false">
+                <property-ui type="textAreaBox" label="Password Script"
+                             description="If you wish to use a script or property lookups for your password, leave the Password field blank and enter it here."/>
+            </property>
+            <property name="validate" required="false">
+                <property-ui type="checkBox" label="Validate Data in JIRA" hidden="true"
+                             description="Select this box to check that valid field data, i.e. project key, priority, issuetype etc is sent. Note: this will require additional API calls."/>
+            </property>
+            <property name="debug" required="false">
+                <property-ui type="checkBox" label="Debug Output" hidden="true"
+                             description="Select this option to display debug output during execution."/>
+            </property>
+        </properties>
+        <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+        <command program="${GROOVY_HOME}/bin/groovy">
+            <arg value="-cp"/>
+            <arg path="classes:lib/*"/>
+            <arg value="-Djnp.disableDiscovery=true"/>
+            <arg file="edit_issues.groovy"/>
+            <arg file="${PLUGIN_INPUT_PROPS}"/>
+            <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+        </command>
+    </step-type>
+
+    <!-- ==================================== -->
+    <!--  Transition Issues                   -->
+    <!-- ==================================== -->
+    <step-type name="Transition Issues">
+        <description>Transition one or more Issues in JIRA, adding comments if required.</description>
+        <properties>
+            <property name="issueIds" required="true">
+                <property-ui type="textBox" label="issueIds" default-value="${p:version/jira.issueIds}"
+                             description="A comma-separated list of issues (by key) to transition."/>
+            </property>
+            <property name="failMode" required="true">
+                <property-ui type="selectBox" label="Fail Mode"
+                             description="What should be done when an issue cannot be found or edited."/>
+                <value label="Warn Only">WARN_ONLY</value>
+                <value label="Fail Fast">FAIL_FAST</value>
+                <value label="Fail On No Updates">FAIL_ON_NO_UPDATES</value>
+                <value label="Fail any Any Failure">FAIL_ON_ANY_FAILURE</value>
+            </property>
+            <property name="transName" required="true">
+                <property-ui type="textBox" label="Transition Name" default-value="Resolve Issue"
+                             description="The transition which should be performed upon the issues. (e.g. 'Resolve Issue' or 'Close Issue')"/>
+            </property>
+            <property name="fixVersions" required="false">
+                <property-ui type="textBox" label="Fix Versions"
+                             description="Command separated list of versions fixed by this issue."/>
+            </property>
+            <property name="commentBody" required="false">
+                <property-ui type="textAreaBox" label="Additional Comments"
+                             description="Any additional comments you wish to add to the issue."/>
+            </property>
+            <property name="assignee" required="false">
+                <property-ui type="textBox" label="Asignee"
+                             description="The user that should be assigned the issue."/>
+            </property>
+            <property name="assignee" required="false">
+                <property-ui type="textBox" label="Assignee"
+                             description="The user that should be assigned the issue."/>
+            </property>
+            <property name="resolution" required="false">
+                <property-ui type="textBox" label="Resolution"
+                             description="The name of Resolution field indicating what was done to resolve the issue, i.e. Fixed."/>
+            </property>
+            <property name="serverUrl" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.serverUrl}" label="JIRA Base URL"
+                             description="The JIRA server URL"/>
+            </property>
+            <property name="username" required="false">
+                <property-ui type="textBox" default-value="${p:application/jira.username}" label="User Name"
+                             description="The user name to be used to connect to the JIRA server."/>
+            </property>
+            <property name="password" required="false">
+                <property-ui type="secureBox" default-value="${p:application/jira.password}" label="Password"
+                             description="The password to be used to connect to the JIRA server."/>
+            </property>
+            <property name="passwordScript" required="false">
+                <property-ui type="textAreaBox" label="Password Script"
+                             description="If you wish to use a script or property lookups for your password, leave the Password field blank and enter it here."/>
+            </property>
+            <property name="validate" required="false">
+                <property-ui type="checkBox" label="Validate Data in JIRA" hidden="true"
+                             description="Select this box to check that valid field data, i.e. project key, priority, issuetype etc is sent. Note: this will require additional API calls."/>
+            </property>
+            <property name="debug" required="false">
+                <property-ui type="checkBox" label="Debug Output" hidden="true"
+                             description="Select this option to display debug output during execution."/>
+            </property>
+        </properties>
+        <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+        <command program="${GROOVY_HOME}/bin/groovy">
+            <arg value="-cp"/>
+            <arg path="classes:lib/*"/>
+            <arg value="-Djnp.disableDiscovery=true"/>
+            <arg file="transition_issues.groovy"/>
+            <arg file="${PLUGIN_INPUT_PROPS}"/>
+            <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+        </command>
+    </step-type>
+
+    <!-- ==================================== -->
+    <!--  Add Comments                        -->
+    <!-- ==================================== -->
+    <step-type name="Add Comments">
+        <description>Add comments to one or more Issues in JIRA.</description>
+        <properties>
+            <property name="issueIds" required="true">
+                <property-ui type="textBox" label="issueIds" default-value="${p:version/jira.issueIds}"
+                             description="A comma-separated list of issues (by key) to add comments to."/>
+            </property>
+            <property name="commentBody" required="true">
+                <property-ui type="textAreaBox" label="Comment"
+                             default-value="Serena Deployment Automation found this Issue referenced in a deployment."
+                             description="The template to use for adding a comment to the issues."/>
+            </property>
+            <property name="failMode" required="true">
+                <property-ui type="selectBox" label="Fail Mode"
+                             description="What should be done when an issue cannot be found or edited."/>
+                <value label="Warn Only">WARN_ONLY</value>
+                <value label="Fail Fast">FAIL_FAST</value>
+                <value label="Fail On No Updates">FAIL_ON_NO_UPDATES</value>
+                <value label="Fail any Any Failure">FAIL_ON_ANY_FAILURE</value>
+            </property>
+            <property name="serverUrl" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.serverUrl}" label="JIRA Base URL"
+                             description="The JIRA server URL"/>
+            </property>
+            <property name="username" required="false">
+                <property-ui type="textBox" default-value="${p:application/jira.username}" label="User Name"
+                             description="The user name to be used to connect to the JIRA server."/>
+            </property>
+            <property name="password" required="false">
+                <property-ui type="secureBox" default-value="${p:application/jira.password}" label="Password"
+                             description="The password to be used to connect to the JIRA server."/>
+            </property>
+            <property name="passwordScript" required="false">
+                <property-ui type="textAreaBox" label="Password Script"
+                             description="If you wish to use a script or property lookups for your password, leave the Password field blank and enter it here."/>
+            </property>
+            <property name="debug" required="false">
+                <property-ui type="checkBox" label="Debug Output" hidden="true"
+                             description="Select this option to display debug output during execution."/>
+            </property>
+        </properties>
+        <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+        <command program="${GROOVY_HOME}/bin/groovy">
+            <arg value="-cp"/>
+            <arg path="classes:lib/*"/>
+            <arg value="-Djnp.disableDiscovery=true"/>
+            <arg file="add_comments.groovy"/>
+            <arg file="${PLUGIN_INPUT_PROPS}"/>
+            <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+        </command>
+    </step-type>
+
+    <!-- ==================================== -->
+    <!--  Check Status                        -->
+    <!-- ==================================== -->
+    <step-type name="Check Status">
+        <description>Check the current status of one or more Issues in JIRA.</description>
+        <properties>
+            <property name="issueIds" required="true">
+                <property-ui type="textBox" label="issueIds" default-value="${p:version/jira.issueIds}"
+                             description="A comma-separated list of issues (by key) to check."/>
+            </property>
+            <property name="statusName" required="true">
+                <property-ui type="textBox" label="Status"
+                             description="The name of the status to check for, i.e. Resolved."/>
+            </property>
+            <property name="failMode" required="true">
+                <property-ui type="selectBox" label="Fail Mode"
+                             description="What should be done when an issue cannot be found or edited."/>
+                <value label="Warn Only">WARN_ONLY</value>
+                <value label="Fail Fast">FAIL_FAST</value>
+                <value label="Fail On No Updates">FAIL_ON_NO_UPDATES</value>
+                <value label="Fail any Any Failure">FAIL_ON_ANY_FAILURE</value>
+            </property>
+            <property name="serverUrl" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.serverUrl}" label="JIRA Base URL"
+                             description="The JIRA server URL"/>
+            </property>
+            <property name="username" required="false">
+                <property-ui type="textBox" default-value="${p:application/jira.username}" label="User Name"
+                             description="The user name to be used to connect to the JIRA server."/>
+            </property>
+            <property name="password" required="false">
+                <property-ui type="secureBox" default-value="${p:application/jira.password}" label="Password"
+                             description="The password to be used to connect to the JIRA server."/>
+            </property>
+            <property name="passwordScript" required="false">
+                <property-ui type="textAreaBox" label="Password Script"
+                             description="If you wish to use a script or property lookups for your password, leave the Password field blank and enter it here."/>
+            </property>
+            <property name="debug" required="false">
+                <property-ui type="checkBox" label="Debug Output" hidden="true"
+                             description="Select this option to display debug output during execution."/>
+            </property>
+        </properties>
+        <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+        <command program="${GROOVY_HOME}/bin/groovy">
+            <arg value="-cp"/>
+            <arg path="classes:lib/*"/>
+            <arg value="-Djnp.disableDiscovery=true"/>
+            <arg file="check_status.groovy"/>
+            <arg file="${PLUGIN_INPUT_PROPS}"/>
+            <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+        </command>
+    </step-type>
+
+    <!-- ==================================== -->
+    <!--  Get Issue Status                    -->
+    <!-- ==================================== -->
+    <step-type name="Get Issue Status">
+        <description>Gets the status of an Issue, setting the value of the property "issueStatus" to the result.</description>
+        <properties>
+            <property name="issueId" required="true">
+                <property-ui type="textBox" label="Issue Id" default-value=""
+                             description="The issue (by key) to get the status of."/>
+            </property>
+            <property name="failMode" required="true">
+                <property-ui type="selectBox" label="Fail Mode"
+                             description="What should be done when the issue cannot be found."/>
+                <value label="Warn Only">WARN_ONLY</value>
+                <value label="Fail any Any Failure">FAIL_ON_ANY_FAILURE</value>
+            </property>
+            <property name="serverUrl" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.serverUrl}" label="JIRA Base URL"
+                             description="The JIRA server URL"/>
+            </property>
+            <property name="username" required="false">
+                <property-ui type="textBox" default-value="${p:application/jira.username}" label="User Name"
+                             description="The user name to be used to connect to the JIRA server."/>
+            </property>
+            <property name="password" required="false">
+                <property-ui type="secureBox" default-value="${p:application/jira.password}" label="Password"
+                             description="The password to be used to connect to the JIRA server."/>
+            </property>
+            <property name="passwordScript" required="false">
+                <property-ui type="textAreaBox" label="Password Script"
+                             description="If you wish to use a script or property lookups for your password, leave the Password field blank and enter it here."/>
+            </property>
+            <property name="debug" required="false">
+                <property-ui type="checkBox" label="Debug Output" hidden="true"
+                             description="Select this option to display debug output during execution."/>
+            </property>
+        </properties>
+        <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+        <command program="${GROOVY_HOME}/bin/groovy">
+            <arg value="-cp"/>
+            <arg path="classes:lib/*"/>
+            <arg value="-Djnp.disableDiscovery=true"/>
+            <arg file="get_issue_status.groovy"/>
+            <arg file="${PLUGIN_INPUT_PROPS}"/>
+            <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+        </command>
+    </step-type>
+
+    <!-- ==================================== -->
+    <!--  Check Issue Exists                  -->
+    <!-- ==================================== -->
+    <step-type name="Check Issue Exists">
+        <description>Check if one or more Issues exist in JIRA.</description>
+        <properties>
+            <property name="issueIds" required="true">
+                <property-ui type="textBox" label="issueIds" default-value="${p:version/jira.issueIds}"
+                             description="A comma-separated list of issues (by key) to check."/>
+            </property>
+            <property name="failMode" required="true">
+                <property-ui type="selectBox" label="Fail Mode"
+                             description="What should be done when an issue cannot be found."/>
+                <value label="Warn Only">WARN_ONLY</value>
+                <value label="Fail Fast">FAIL_FAST</value>
+                <value label="Fail On No Updates">FAIL_ON_NO_UPDATES</value>
+                <value label="Fail any Any Failure">FAIL_ON_ANY_FAILURE</value>
+            </property>
+            <property name="serverUrl" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.serverUrl}" label="JIRA Base URL"
+                             description="The JIRA server URL"/>
+            </property>
+            <property name="username" required="false">
+                <property-ui type="textBox" default-value="${p:application/jira.username}" label="User Name"
+                             description="The user name to be used to connect to the JIRA server."/>
+            </property>
+            <property name="password" required="false">
+                <property-ui type="secureBox" default-value="${p:application/jira.password}" label="Password"
+                             description="The password to be used to connect to the JIRA server."/>
+            </property>
+            <property name="passwordScript" required="false">
+                <property-ui type="textAreaBox" label="Password Script"
+                             description="If you wish to use a script or property lookups for your password, leave the Password field blank and enter it here."/>
+            </property>
+            <property name="debug" required="false">
+                <property-ui type="checkBox" label="Debug Output" hidden="true"
+                             description="Select this option to display debug output during execution."/>
+            </property>
+        </properties>
+        <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+        <command program="${GROOVY_HOME}/bin/groovy">
+            <arg value="-cp"/>
+            <arg path="classes:lib/*"/>
+            <arg value="-Djnp.disableDiscovery=true"/>
+            <arg file="check_issues_exists.groovy"/>
+            <arg file="${PLUGIN_INPUT_PROPS}"/>
+            <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+        </command>
+    </step-type>
+
+    <!-- ==================================== -->
+    <!--  Check Project Exists                -->
+    <!-- ==================================== -->
+    <step-type name="Check Project Exists">
+        <description>Check if one or more Projects exist in JIRA.</description>
+        <properties>
+            <property name="projectIds" required="true">
+                <property-ui type="textBox" label="projectIds" default-value="${p:application/jira.projectKey}"
+                             description="A comma-separated list of projects (by key) to check."/>
+            </property>
+            <property name="failMode" required="true">
+                <property-ui type="selectBox" label="Fail Mode"
+                             description="What should be done when a project cannot be found."/>
+                <value label="Warn Only">WARN_ONLY</value>
+                <value label="Fail Fast">FAIL_FAST</value>
+                <value label="Fail On No Updates">FAIL_ON_NO_UPDATES</value>
+                <value label="Fail any Any Failure">FAIL_ON_ANY_FAILURE</value>
+            </property>
+            <property name="serverUrl" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.serverUrl}" label="JIRA Base URL"
+                             description="The JIRA server URL"/>
+            </property>
+            <property name="username" required="false">
+                <property-ui type="textBox" default-value="${p:application/jira.username}" label="User Name"
+                             description="The user name to be used to connect to the JIRA server."/>
+            </property>
+            <property name="password" required="false">
+                <property-ui type="secureBox" default-value="${p:application/jira.password}" label="Password"
+                             description="The password to be used to connect to the JIRA server."/>
+            </property>
+            <property name="passwordScript" required="false">
+                <property-ui type="textAreaBox" label="Password Script"
+                             description="If you wish to use a script or property lookups for your password, leave the Password field blank and enter it here."/>
+            </property>
+            <property name="debug" required="false">
+                <property-ui type="checkBox" label="Debug Output" hidden="true"
+                             description="Select this option to display debug output during execution."/>
+            </property>
+        </properties>
+        <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+        <command program="${GROOVY_HOME}/bin/groovy">
+            <arg value="-cp"/>
+            <arg path="classes:lib/*"/>
+            <arg value="-Djnp.disableDiscovery=true"/>
+            <arg file="check_project_exists.groovy"/>
+            <arg file="${PLUGIN_INPUT_PROPS}"/>
+            <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+        </command>
+    </step-type>
+
+    <!-- ==================================== -->
+    <!--  Check Component Exists              -->
+    <!-- ==================================== -->
+    <step-type name="Check Component Exists">
+        <description>Check if one or more Components exist in JIRA.</description>
+        <properties>
+            <property name="projectKey" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.projectKey}" label="Project Key"
+                             description="The project key in JIRA."/>
+            </property>
+            <property name="componentIds" required="true">
+                <property-ui type="textBox" label="componentIds" default-value="${p:component/jira.component}"
+                             description="A comma-separated list of components (by name) to check."/>
+            </property>
+            <property name="failMode" required="true">
+                <property-ui type="selectBox" label="Fail Mode"
+                             description="What should be done when a component cannot be found."/>
+                <value label="Warn Only">WARN_ONLY</value>
+                <value label="Fail Fast">FAIL_FAST</value>
+                <value label="Fail On No Updates">FAIL_ON_NO_UPDATES</value>
+                <value label="Fail any Any Failure">FAIL_ON_ANY_FAILURE</value>
+            </property>
+            <property name="serverUrl" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.serverUrl}" label="JIRA Base URL"
+                             description="The JIRA server URL"/>
+            </property>
+            <property name="username" required="false">
+                <property-ui type="textBox" default-value="${p:application/jira.username}" label="User Name"
+                             description="The user name to be used to connect to the JIRA server."/>
+            </property>
+            <property name="password" required="false">
+                <property-ui type="secureBox" default-value="${p:application/jira.password}" label="Password"
+                             description="The password to be used to connect to the JIRA server."/>
+            </property>
+            <property name="passwordScript" required="false">
+                <property-ui type="textAreaBox" label="Password Script"
+                             description="If you wish to use a script or property lookups for your password, leave the Password field blank and enter it here."/>
+            </property>
+            <property name="debug" required="false">
+                <property-ui type="checkBox" label="Debug Output" hidden="true"
+                             description="Select this option to display debug output during execution."/>
+            </property>
+        </properties>
+        <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+        <command program="${GROOVY_HOME}/bin/groovy">
+            <arg value="-cp"/>
+            <arg path="classes:lib/*"/>
+            <arg value="-Djnp.disableDiscovery=true"/>
+            <arg file="check_component_exists.groovy"/>
+            <arg file="${PLUGIN_INPUT_PROPS}"/>
+            <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+        </command>
+    </step-type>
+
+    <!-- ==================================== -->
+    <!--  Check Version Exists                -->
+    <!-- ==================================== -->
+    <step-type name="Check Version Exists">
+        <description>Check if one or more Versions exist in JIRA.</description>
+        <properties>
+            <property name="projectKey" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.projectKey}" label="Project Key"
+                             description="The project key in JIRA."/>
+            </property>
+            <property name="versionIds" required="true">
+                <property-ui type="textBox" label="versionIds" default-value="${p:version.name}"
+                             description="A comma-separated list of versions (by name) to check."/>
+            </property>
+            <property name="failMode" required="true">
+                <property-ui type="selectBox" label="Fail Mode"
+                             description="What should be done when a version cannot be found."/>
+                <value label="Warn Only">WARN_ONLY</value>
+                <value label="Fail Fast">FAIL_FAST</value>
+                <value label="Fail On No Updates">FAIL_ON_NO_UPDATES</value>
+                <value label="Fail any Any Failure">FAIL_ON_ANY_FAILURE</value>
+            </property>
+            <property name="serverUrl" required="true">
+                <property-ui type="textBox" default-value="${p:application/jira.serverUrl}" label="JIRA Base URL"
+                             description="The JIRA server URL"/>
+            </property>
+            <property name="username" required="false">
+                <property-ui type="textBox" default-value="${p:application/jira.username}" label="User Name"
+                             description="The user name to be used to connect to the JIRA server."/>
+            </property>
+            <property name="password" required="false">
+                <property-ui type="secureBox" default-value="${p:application/jira.password}" label="Password"
+                             description="The password to be used to connect to the JIRA server."/>
+            </property>
+            <property name="passwordScript" required="false">
+                <property-ui type="textAreaBox" label="Password Script"
+                             description="If you wish to use a script or property lookups for your password, leave the Password field blank and enter it here."/>
+            </property>
+            <property name="debug" required="false">
+                <property-ui type="checkBox" label="Debug Output" hidden="true"
+                             description="Select this option to display debug output during execution."/>
+            </property>
+        </properties>
+        <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+        <command program="${GROOVY_HOME}/bin/groovy">
+            <arg value="-cp"/>
+            <arg path="classes:lib/*"/>
+            <arg value="-Djnp.disableDiscovery=true"/>
+            <arg file="check_version_exists.groovy"/>
+            <arg file="${PLUGIN_INPUT_PROPS}"/>
+            <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+        </command>
+    </step-type>
+
+</plugin>
